@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRANSITFLOW - RuralLens</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Tiro+Gurmukhi&family=Tiro+Devanagari+Hindi&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .font-hindi { font-family: 'Tiro Devanagari Hindi', serif; }
+        .font-punjabi { font-family: 'Tiro Gurmukhi', serif; }
+
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(0deg, rgba(0, 255, 255, 0.03) 0px, transparent 1px, transparent 2px, rgba(0, 255, 255, 0.03) 3px),
+                        repeating-linear-gradient(90deg, rgba(0, 255, 255, 0.03) 0px, transparent 1px, transparent 2px, rgba(0, 255, 255, 0.03) 3px);
+            pointer-events: none; z-index: 1;
+        }
+        .neon-trails { position: fixed; width: 100%; height: 100%; top: 0; left: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+        .trail { position: absolute; height: 1px; background: linear-gradient(90deg, transparent, #00ffff, transparent); animation: moveTrail 3s linear infinite; opacity: 0.3; }
+        .trail:nth-child(1) { top: 20%; width: 300px; animation-delay: 0s; }
+        .trail:nth-child(2) { top: 40%; width: 400px; animation-delay: 1s; }
+        .trail:nth-child(3) { top: 60%; width: 250px; animation-delay: 2s; }
+        .trail:nth-child(4) { top: 80%; width: 350px; animation-delay: 1.5s; }
+        @keyframes moveTrail { 0% { left: -100%; } 100% { left: 100%; } }
+        .content-wrapper { position: relative; z-index: 2; }
+        .neon-text-cyan { color: #00ffff; text-shadow: 0 0 1px #00ffff, 0 0 2px #00ffff, 0 0 1px #00ffff, 0 0 10px #00ffff; font-family: 'Orbitron', sans-serif; }
+        .neon-text-green { color: #39ff14; text-shadow: 0 0 1px #39ff14, 0 0 2px #39ff14, 0 0 3px #39ff14; }
+        .neon-border-cyan { border: 2px solid #00ffff; box-shadow: 0 0 10px #00ffff, inset 0 0 10px rgba(0, 255, 255, 0.1); }
+        .neon-border-green { border: 2px solid #39ff14; box-shadow: 0 0 10px #39ff14, inset 0 0 10px rgba(57, 255, 20, 0.1); }
+        .neon-border-blue { border: 2px solid #4da6ff; box-shadow: 0 0 10px #4da6ff, inset 0 0 10px rgba(77, 166, 255, 0.1); }
+        .search-btn { background: linear-gradient(135deg, #00ffff, #00d4d4); box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); transition: all 0.3s ease; }
+        .search-btn:active { color: green; box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); transform: scale(1.05); }
+        .error-badge { background: linear-gradient(135deg, #8b0000, #ff0000); box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+        .log-entry { background: rgba(0, 255, 255, 0.05); border-left: 3px solid #00ffff; transition: all 0.3s ease; }
+        .log-entry:hover { background: rgba(0, 255, 255, 0.1); transform: translateX(5px); }
+        .input-field { background: rgba(10, 14, 39, 0.8); backdrop-filter: blur(10px); }
+        .card { background: rgba(22, 33, 62, 0.6); backdrop-filter: blur(10px); }
+        .hidden { display: none !important; }
+        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); }
+        .modal-content { background: linear-gradient(145deg, #1a1a2e, #16213e); border: 1px solid #00ffff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); }
+        @media (max-width: 768px) { .neon-text-cyan { font-size: 2rem; } }
+    </style>
+</head>
+<body>
+    <div class="neon-trails"><div class="trail"></div><div class="trail"></div><div class="trail"></div><div class="trail"></div></div>
+    
+    <div class="content-wrapper">
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+            
+            <header class="text-center mb-12 relative">
+                <div class="absolute top-0 right-0">
+                    <select id="langSelect" onchange="changeLanguage()" class="bg-gray-800 text-cyan-400 border border-cyan-500 rounded-lg px-3 py-1 text-sm focus:outline-none font-bold cursor-pointer hover:bg-gray-700">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="hi">🇮🇳 हिंदी (Hindi)</option>
+                        <option value="pa">👳 ਪੰਜਾਬੀ (Punjabi)</option>
+                    </select>
+                </div>
+                <h1 class="neon-text-cyan text-5xl md:text-7xl font-black mb-3 tracking-wider">TRANSITFLOW</h1>
+                <p data-key="subtitle" class="text-gray-400 text-lg md:text-xl font-light tracking-wide">Real-time Vehicle Tracker & ETA Predictor</p>
+            </header>
+            
+            <div class="mb-12">
+                <div class="relative max-w-2xl mx-auto">
+                    <input type="text" id="ticketInput" data-placeholder="enter_ticket" placeholder="ENTER TICKET ID" class="input-field w-full px-6 py-4 rounded-full text-white text-lg neon-border-cyan focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-gray-500 tracking-wide" />
+                    <button id="searchBtn" class="search-btn absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center cursor-pointer">
+                        <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                    <div id="errorBadge" class="error-badge hidden absolute right-0 top-full mt-2 px-4 py-2 rounded text-white text-sm font-semibold">TICKET ID NOT FOUND</div>
+                </div>
+            </div>
+
+            <div class="mb-12 border-t border-gray-800 pt-8">
+                <h2 data-key="find_route" class="text-center text-gray-500 text-sm font-bold mb-6 tracking-[0.2em]">OR FIND ROUTE</h2>
+                <div class="flex flex-col md:flex-row gap-4 max-w-4xl mx-auto relative">
+                    <div class="relative flex-1">
+                        <div data-key="from" class="absolute top-3 left-4 text-cyan-400 text-xs font-bold tracking-wider z-10">FROM</div>
+                        <select id="fromStation" class="input-field w-full px-4 pt-8 pb-3 rounded-xl text-white text-lg neon-border-blue focus:outline-none appearance-none cursor-pointer">
+                            <option value="" disabled selected data-key="select_origin">Select Origin</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none">▼</div>
+                    </div>    
+                    <div class="relative flex-1">
+                        <div data-key="to" class="absolute top-3 left-4 text-green-400 text-xs font-bold tracking-wider z-10">TO</div>
+                        <select id="toStation" class="input-field w-full px-4 pt-8 pb-3 rounded-xl text-white text-lg neon-border-green focus:outline-none appearance-none cursor-pointer">
+                            <option value="" disabled selected data-key="select_dest">Select Destination</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-green-400 pointer-events-none">▼</div>
+                    </div>
+                    <div class="relative flex-1">
+                        <div data-key="date" class="absolute top-3 left-4 text-purple-400 text-xs font-bold tracking-wider z-10">DATE</div>
+                        <input type="date" id="travelDate" class="input-field w-full px-4 pt-8 pb-3 rounded-xl text-white text-lg border-2 border-purple-500 shadow-[0_0_10px_#a855f7] focus:outline-none appearance-none cursor-pointer placeholder-transparent" />
+                    </div>
+                    <button id="findRouteBtn" class="search-btn px-8 py-2 rounded-xl font-black text-black tracking-wider flex items-center justify-center gap-2 hover:scale-105 transition-transform">
+                        <span data-key="search_btn">SEARCH</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </button>
+                </div>
+                <div id="routeError" class="hidden text-center mt-4">
+                    <span class="error-badge px-4 py-1 rounded text-white text-sm font-semibold">NO BUSES FOUND ON THIS ROUTE</span>
+                </div>
+            </div>
+
+            <div id="routeResults" class="hidden mb-12">
+                <h2 data-key="avail_buses" class="text-2xl font-bold mb-6 text-gray-300 tracking-wide">AVAILABLE BUSES</h2>
+                <div id="busList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <div id="vehicleDetails" class="hidden mb-12">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <div class="card neon-border-blue rounded-lg p-6">
+                        <div data-key="license" class="text-gray-400 text-sm font-semibold mb-2 tracking-wider">LICENSE PLATE:</div>
+                        <div id="licensePlate" class="neon-text-cyan text-3xl font-bold tracking-wider">-</div>
+                    </div>
+                    <div class="card neon-border-green rounded-lg p-6">
+                        <div data-key="route" class="text-gray-400 text-sm font-semibold mb-2 tracking-wider">ROUTE:</div>
+                        <div id="routeName" class="neon-text-green text-3xl font-bold tracking-wider">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="logsAndEta" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <h2 data-key="recent_logs" class="text-2xl font-bold mb-6 text-gray-300 tracking-wide">RECENT LOGS</h2>
+                        <div id="logsList" class="space-y-3"></div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <div class="card neon-border-cyan rounded-lg p-8 sticky top-8">
+                            <div data-key="est_arrival" class="neon-text-cyan text-lg font-bold mb-4 tracking-wider text-center">ESTIMATED ARRIVAL</div>
+                            <div id="etaTime" class="neon-text-green text-5xl md:text-6xl font-black text-center mb-3">--:--:--</div>
+                            <div id="etaLocation" class="text-gray-400 text-center text-lg">at Central Station</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal-overlay fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-content w-full max-w-md rounded-2xl p-8 relative">
+            <button onclick="closePayment()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div id="paymentStep1">
+                <h2 data-key="confirm_booking" class="text-2xl font-bold text-cyan-400 mb-6 text-center">CONFIRM BOOKING</h2>
+                <div class="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700">
+                    <div class="flex justify-between mb-2"><span data-key="bus_label" class="text-gray-400 text-sm">BUS</span><span id="payPlate" class="text-white font-bold">MH-12-AB-1234</span></div>
+                    <div class="flex justify-between mb-2"><span data-key="route_label" class="text-gray-400 text-sm">ROUTE</span><div class="text-right"><span id="payFrom" class="text-green-400 font-bold block text-sm">Central</span><span class="text-gray-600 text-xs">to</span><span id="payTo" class="text-cyan-400 font-bold block text-sm">Airport</span></div></div>
+                    <div class="flex justify-between mt-4 pt-4 border-t border-gray-700"><span data-key="total_amt" class="text-gray-400">Total Amount</span><span id="payAmount" class="text-3xl font-bold text-white">₹120</span></div>
+                </div>
+                <div class="space-y-4 mb-6">
+                    <div><label data-key="passenger_name" class="text-xs text-gray-500 font-bold tracking-wider ml-2">PASSENGER NAME</label><input type="text" id="passengerName" class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-cyan-400 outline-none"></div>
+                    <div><label data-key="mobile_num" class="text-xs text-gray-500 font-bold tracking-wider ml-2">MOBILE NUMBER</label><input type="tel" id="passengerMobile" class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-cyan-400 outline-none" maxlength="10"></div>
+                </div>
+                <button onclick="processPayment()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 transition-all transform hover:scale-[1.02]"><span data-key="pay_now">PAY NOW</span></button>
+            </div>
+            <div id="paymentStep2" class="hidden text-center">
+                <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(34,197,94,0.6)] animate-bounce"><svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                <h2 data-key="booking_conf" class="text-3xl font-bold text-white mb-2">BOOKING CONFIRMED</h2>
+                <p data-key="sms_sent" class="text-gray-400 mb-8">Ticket sent via SMS.</p>
+                <div class="bg-white p-4 rounded-lg inline-block mb-8"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TransitFlow-Ticket-Confirmed" alt="QR Code" class="w-32 h-32"></div>
+                <button onclick="closePayment()" class="block w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="smsModal" class="modal-overlay fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-content w-full max-w-md rounded-2xl p-8 relative">
+            <button onclick="closeSmsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div id="smsStep1">
+                <h2 data-key="schedule_sms" class="text-2xl font-bold text-cyan-400 mb-6 text-center">SCHEDULE SMS ALERT</h2>
+                <div class="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700">
+                    <div class="flex justify-between mb-2"><span data-key="bus_label" class="text-gray-400 text-sm">BUS</span><span id="smsPlate" class="text-white font-bold">-</span></div>
+                    <div class="flex justify-between mb-2"><span data-key="route_label" class="text-gray-400 text-sm">ROUTE</span><div class="text-right"><span id="smsFrom" class="text-green-400 font-bold block text-sm">-</span><span class="text-gray-600 text-xs">to</span><span id="smsTo" class="text-cyan-400 font-bold block text-sm">-</span></div></div>
+                    <div class="flex justify-between mt-4 pt-4 border-t border-gray-700"><span class="text-gray-400 text-sm">Arrival Time</span><span id="smsArrival" class="text-cyan-400 font-bold">-</span></div>
+                </div>
+                <div class="space-y-4 mb-6">
+                    <div><label data-key="mobile_num" class="text-xs text-gray-500 font-bold tracking-wider ml-2">MOBILE NUMBER</label><input type="tel" id="smsMobile" class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-cyan-400 outline-none" maxlength="10" placeholder="Enter 10-digit number"></div>
+                </div>
+                <button onclick="scheduleSms()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-[1.02]"><span data-key="schedule_btn">SCHEDULE SMS</span></button>
+            </div>
+            <div id="smsStep2" class="hidden text-center">
+                <div class="w-20 h-20 bg-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(6,182,212,0.6)] animate-bounce"><svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                <h2 data-key="sms_scheduled" class="text-3xl font-bold text-white mb-2">SMS SCHEDULED</h2>
+                <p data-key="sms_will_send" class="text-gray-400 mb-8">You will receive an SMS when the bus arrives at the destination.</p>
+                <button onclick="closeSmsModal()" class="block w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Inline script to populate dropdowns immediately (works even with CORS issues) -->
+    <script>
+        // Fallback stations list (same as in mockdata2.js)
+        const FALLBACK_STATIONS = [
+            "Central Station", "Downtown Hub", "North Plaza", "South Gateway", 
+            "West End", "Airport Terminal", "East Industrial Zone", "Riverside Park", 
+            "University Campus", "Old Town Market", "City Civil Hospital",
+            "Grand Tech Park", "Botanical Garden", "Museum Square", "Cricket Stadium",
+            "Financial District", "Railway Junction", "Sector 17 Plaza",
+            "Ancient Fort", "Zoo Entrance"
+        ];
+
+        function populateDropdowns(stations) {
+            const fromSelect = document.getElementById('fromStation');
+            const toSelect = document.getElementById('toStation');
+            if (stations && stations.length > 0) {
+                // Clear existing options except the first one
+                while (fromSelect.options.length > 1) fromSelect.remove(1);
+                while (toSelect.options.length > 1) toSelect.remove(1);
+                
+                stations.forEach(station => {
+                    fromSelect.add(new Option(station, station));
+                    toSelect.add(new Option(station, station));
+                });
+            }
+        }
+
+        // Populate dropdowns immediately with fallback data
+        document.addEventListener('DOMContentLoaded', function() {
+            populateDropdowns(FALLBACK_STATIONS);
+            const dateInput = document.getElementById('travelDate');
+            if (dateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.setAttribute('min', today);
+            }
+        });
+    </script>
+
+    <!-- Load mockdata2.js as a module script - this will execute and set window variables -->
+    <script src="./mockdata2.js" type="module" onerror="console.error('Failed to load mockdata2.js - check file path and CORS settings')"></script>
+
+    <script type="module">
+        let MOCK_DATA, STATION_TRANSLATIONS;
+        
+        // Function to initialize the app with full data
+        function initializeApp() {
+            if (!MOCK_DATA) {
+                console.warn('MOCK_DATA not available, using fallback data');
+                return;
+            }
+            
+            const NEXT_STATION = MOCK_DATA.NEXT_STATION;
+            const TRAVEL_TIME_MINUTES = MOCK_DATA.TRAVEL_TIME_MINUTES;
+            const dateInput = document.getElementById('travelDate');
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.setAttribute('min', today); 
+            
+            // Re-populate with actual data if available
+            populateDropdowns(MOCK_DATA.STATIONS);
+        }
+
+        // Function to check if mockdata2.js is loaded
+        function checkMockDataLoaded() {
+            const hasData = !!(window.MOCK_DATA && window.STATION_TRANSLATIONS && window.findBusesOnRoute);
+            if (hasData) {
+                console.log('✓ mockdata2.js verification:', {
+                    MOCK_DATA: !!window.MOCK_DATA,
+                    STATION_TRANSLATIONS: !!window.STATION_TRANSLATIONS,
+                    findBusesOnRoute: !!window.findBusesOnRoute,
+                    vehicles: window.MOCK_DATA?.vehicles ? Object.keys(window.MOCK_DATA.vehicles).length : 0
+                });
+            }
+            return hasData;
+        }
+
+        // Try to import the module dynamically
+        async function loadMockData() {
+            console.log('🔄 Attempting to load mockdata2.js...');
+            try {
+                const module = await import('./mockdata2.js');
+                MOCK_DATA = module.MOCK_DATA;
+                STATION_TRANSLATIONS = module.STATION_TRANSLATIONS;
+                console.log('✓ mockdata2.js loaded successfully via dynamic import');
+                initializeApp();
+                // Ensure findBusesOnRoute is available
+                if (!window.findBusesOnRoute) {
+                    console.warn('⚠ findBusesOnRoute not available after module load - waiting for script tag...');
+                } else {
+                    console.log('✓ All functions available');
+                }
+            } catch (error) {
+                console.warn('⚠ Dynamic import failed (CORS issue when opening file://). Waiting for script tag to load...', error.message);
+                // Fallback: use window variables (set by mockdata2.js script tag)
+                // Wait for the script tag to execute and set window variables
+                let attempts = 0;
+                const maxAttempts = 60; // 3 seconds
+                const checkWindow = setInterval(() => {
+                    attempts++;
+                    if (checkMockDataLoaded()) {
+                        clearInterval(checkWindow);
+                        MOCK_DATA = window.MOCK_DATA;
+                        STATION_TRANSLATIONS = window.STATION_TRANSLATIONS;
+                        console.log('✓ mockdata2.js loaded successfully via window variables');
+                        initializeApp();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkWindow);
+                        console.error('✗ mockdata2.js failed to load after', maxAttempts * 50, 'ms');
+                        console.error('Status check:', {
+                            window_MOCK_DATA: !!window.MOCK_DATA,
+                            window_STATION_TRANSLATIONS: !!window.STATION_TRANSLATIONS,
+                            window_findBusesOnRoute: !!window.findBusesOnRoute
+                        });
+                        console.warn('⚠ MOCK_DATA or findBusesOnRoute not available. Using fallback stations.');
+                        console.warn('💡 For full functionality, use a local server:');
+                        console.warn('   - VS Code: Install "Live Server" extension');
+                        console.warn('   - Or run: python -m http.server 8000');
+                        console.warn('   - Then open: http://localhost:8000/index2.html');
+                        if (!window.findBusesOnRoute) {
+                            console.error('❌ findBusesOnRoute function is not available');
+                        }
+                        if (!window.MOCK_DATA) {
+                            console.error('❌ MOCK_DATA is not available');
+                        }
+                    } else if (attempts % 10 === 0) {
+                        // Log progress every 500ms
+                        console.log(`⏳ Still waiting for mockdata2.js... (${attempts}/${maxAttempts})`);
+                    }
+                }, 50);
+            }
+        }
+
+        // Start loading
+        loadMockData();
+
+        const TRANSLATIONS = {
+            en: { subtitle: "Real-time Vehicle Tracker & ETA Predictor", enter_ticket: "ENTER TICKET ID", find_route: "OR FIND ROUTE", from: "FROM", to: "TO", date: "DATE", select_origin: "Select Origin", select_dest: "Select Destination", search_btn: "SEARCH", avail_buses: "AVAILABLE BUSES", license: "LICENSE PLATE:", route: "ROUTE:", recent_logs: "RECENT LOGS", est_arrival: "ESTIMATED ARRIVAL", confirm_booking: "CONFIRM BOOKING", bus_label: "BUS", route_label: "ROUTE", total_amt: "Total Amount", passenger_name: "PASSENGER NAME", mobile_num: "MOBILE NUMBER", pay_now: "PAY NOW", booking_conf: "BOOKING CONFIRMED", sms_sent: "Ticket sent via SMS.", schedule_sms: "SCHEDULE SMS ALERT", schedule_btn: "SCHEDULE SMS", sms_scheduled: "SMS SCHEDULED", sms_will_send: "You will receive an SMS when the bus arrives at the destination." },
+            hi: { subtitle: "वास्तविक समय वाहन ट्रैकर और ईटीए", enter_ticket: "टिकट आईडी दर्ज करें", find_route: "या रूट खोजें", from: "कहाँ से", to: "कहाँ तक", date: "दिनांक", select_origin: "स्टेशन चुनें", select_dest: "गंतव्य चुनें", search_btn: "खोजें", avail_buses: "उपलब्ध बसें", license: "गाड़ी नंबर:", route: "रूट:", recent_logs: "हाल ही के लॉग", est_arrival: "अनुमानित समय", confirm_booking: "बुकिंग की पुष्टि करें", bus_label: "बस", route_label: "रूट", total_amt: "कुल राशि", passenger_name: "यात्री का नाम", mobile_num: "मोबाइल नंबर", pay_now: "भुगतान करें", booking_conf: "बुकिंग पक्की हो गई", sms_sent: "टिकट एसएमएस द्वारा भेजा गया।", schedule_sms: "एसएमएस अलर्ट शेड्यूल करें", schedule_btn: "एसएमएस शेड्यूल करें", sms_scheduled: "एसएमएस शेड्यूल हो गया", sms_will_send: "जब बस गंतव्य पर पहुंचेगी तो आपको एसएमएस मिलेगा।" },
+            pa: { subtitle: "ਰੀਅਲ-ਟਾਈਮ ਵਹੀਕਲ ਟਰੈਕਰ", enter_ticket: "ਟਿਕਟ ਆਈਡੀ ਭਰੋ", find_route: "ਜਾਂ ਰੂਟ ਲੱਭੋ", from: "ਕਿੱਥੋਂ", to: "ਕਿੱਥੇ ਤੱਕ", date: "ਮਿਤੀ", select_origin: "ਸਟੇਸ਼ਨ ਚੁਣੋ", select_dest: "ਮੰਜ਼ਿਲ ਚੁਣੋ", search_btn: "ਖੋਜੋ", avail_buses: "ਉਪਲਬਧ ਬੱਸਾਂ", license: "ਗੱਡੀ ਨੰਬਰ:", route: "ਰੂਟ:", recent_logs: "ਹਾਲੀਆ ਲੌਗ", est_arrival: "ਅਨੁਮਾਨਿਤ ਸਮਾਂ", confirm_booking: "ਬੁਕਿੰਗ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ", bus_label: "ਬੱਸ", route_label: "ਰੂਟ", total_amt: "ਕੁੱਲ ਰਕਮ", passenger_name: "ਯਾਤਰੀ ਦਾ ਨਾਮ", mobile_num: "ਮੋਬਾਈਲ ਨੰਬਰ", pay_now: "ਭੁਗਤਾਨ ਕਰੋ", booking_conf: "ਬੁਕਿੰਗ ਪੱਕੀ ਹੋ ਗਈ", sms_sent: "ਟਿਕਟ SMS ਰਾਹੀਂ ਭੇਜੀ ਗਈ।", schedule_sms: "SMS ਅਲਰਟ ਸ਼ੈਡਿਊਲ ਕਰੋ", schedule_btn: "SMS ਸ਼ੈਡਿਊਲ ਕਰੋ", sms_scheduled: "SMS ਸ਼ੈਡਿਊਲ ਹੋ ਗਿਆ", sms_will_send: "ਜਦੋਂ ਬੱਸ ਮੰਜ਼ਿਲ 'ਤੇ ਪਹੁੰਚੇਗੀ ਤਾਂ ਤੁਹਾਨੂੰ SMS ਮਿਲੇਗਾ।" }
+        };
+
+        window.changeLanguage = function() {
+            const lang = document.getElementById('langSelect').value;
+            const t = TRANSLATIONS[lang];
+            if(lang === 'hi') document.body.classList.add('font-hindi'); else document.body.classList.remove('font-hindi');
+            if(lang === 'pa') document.body.classList.add('font-punjabi'); else document.body.classList.remove('font-punjabi');
+            document.querySelectorAll('[data-key]').forEach(el => { const key = el.getAttribute('data-key'); if(t[key]) el.innerText = t[key]; });
+            document.querySelectorAll('[data-placeholder]').forEach(el => { const key = el.getAttribute('data-placeholder'); if(t[key]) el.placeholder = t[key]; });
+            Array.from(fromSelect.options).forEach(opt => { if (opt.value && STATION_TRANSLATIONS[opt.value] && STATION_TRANSLATIONS[opt.value][lang]) opt.text = STATION_TRANSLATIONS[opt.value][lang]; else opt.text = opt.value || t.select_origin; });
+            Array.from(toSelect.options).forEach(opt => { if (opt.value && STATION_TRANSLATIONS[opt.value] && STATION_TRANSLATIONS[opt.value][lang]) opt.text = STATION_TRANSLATIONS[opt.value][lang]; else opt.text = opt.value || t.select_dest; });
+            const fromVal = document.getElementById('fromStation').value; const toVal = document.getElementById('toStation').value;
+            if (fromVal && toVal && !document.getElementById('routeResults').classList.contains('hidden')) window.findBusesOnRoute();
+        };
+
+        function getTimeAgo(timestamp) {
+            const diff = Date.now() - timestamp.getTime();
+            const minutes = Math.floor(diff / 60000);
+            if (minutes < 1) return 'NOW';
+            return `${minutes} MIN AGO`;
+        }
+        function formatTime(date) { return String(date.getHours()).padStart(2,'0') + ":" + String(date.getMinutes()).padStart(2,'0'); }
+        function calculateETA(vehicleId, departureDateISO = null) { 
+            const baseTravelTime = (MOCK_DATA && MOCK_DATA.TRAVEL_TIME_MINUTES) ? MOCK_DATA.TRAVEL_TIME_MINUTES : 20;
+            
+            // Create a hash from vehicleId and current time to get consistent but changing variation
+            const hash = (vehicleId || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const timeHash = Date.now() % 10000; // Use current time for variation
+            const combinedHash = (hash + timeHash) % 100;
+            
+            // Add variation: -5 to +15 minutes from base time
+            const variation = (combinedHash % 21) - 5; // Range: -5 to +15
+            const travelTime = baseTravelTime + variation;
+            
+            // If we have departure date, calculate from that, otherwise from now
+            const baseTime = departureDateISO ? new Date(departureDateISO) : new Date();
+            return new Date(baseTime.getTime() + travelTime * 60000); 
+        }
+
+        // --- DISPLAY LOGIC (WITH LOGS RESTORED) ---
+        function displayVehicleInfo(ticketId) {
+            const vehicleId = MOCK_DATA.tickets[ticketId];
+            if (!vehicleId) {
+                document.getElementById('errorBadge').classList.remove('hidden');
+                document.getElementById('vehicleDetails').classList.add('hidden');
+                document.getElementById('logsAndEta').classList.add('hidden');
+                return;
+            }
+            displayVehicleLogs(vehicleId);
+        }
+
+        function displayVehicleLogs(vehicleId, departureDateISO = null) {
+            if (!vehicleId || !MOCK_DATA.vehicles[vehicleId]) {
+                document.getElementById('errorBadge').classList.remove('hidden');
+                document.getElementById('vehicleDetails').classList.add('hidden');
+                document.getElementById('logsAndEta').classList.add('hidden');
+                return;
+            }
+            document.getElementById('errorBadge').classList.add('hidden');
+            document.getElementById('vehicleDetails').classList.remove('hidden');
+            document.getElementById('logsAndEta').classList.remove('hidden');
+            
+            document.getElementById('licensePlate').textContent = vehicleId;
+            document.getElementById('routeName').textContent = MOCK_DATA.vehicles[vehicleId];
+            
+            // Check if this is a future bus (date is beyond tomorrow)
+            let isFutureBus = false;
+            if (departureDateISO) {
+                const departureDate = new Date(departureDateISO);
+                const now = new Date();
+                const today = new Date(); today.setHours(0,0,0,0);
+                const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+                
+                // Check if the departure date (date only, not time) is beyond tomorrow
+                const departureDateOnly = new Date(departureDate.getFullYear(), departureDate.getMonth(), departureDate.getDate());
+                const dayAfterTomorrowOnly = new Date(dayAfterTomorrow.getFullYear(), dayAfterTomorrow.getMonth(), dayAfterTomorrow.getDate());
+                
+                // If departure date is after day after tomorrow, it's a future bus
+                isFutureBus = departureDateOnly > dayAfterTomorrowOnly;
+            }
+            
+            // POPULATE LOGS
+            const logsListElement = document.getElementById('logsList');
+            logsListElement.innerHTML = '';
+            
+            if (isFutureBus) {
+                // Show "not departed yet" message for future buses
+                const currentLang = document.getElementById('langSelect')?.value || 'en';
+                const notDepartedText = {
+                    en: 'NOT DEPARTED YET',
+                    hi: 'अभी तक प्रस्थान नहीं हुआ',
+                    pa: 'ਅਜੇ ਤੱਕ ਰਵਾਨਾ ਨਹੀਂ ਹੋਇਆ'
+                };
+                logsListElement.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-yellow-400 text-2xl mb-2">⏳</div>
+                        <div class="text-yellow-400 font-bold text-xl">${notDepartedText[currentLang] || notDepartedText.en}</div>
+                        <div class="text-gray-500 text-sm mt-2">This bus has not departed yet</div>
+                    </div>
+                `;
+                
+                // Calculate dynamic ETA that changes on each call
+                let etaTimeText = '--:--';
+                let etaLocationText = 'Not available';
+                
+                if (departureDateISO) {
+                    const scheduledDeparture = new Date(departureDateISO);
+                    const now = new Date();
+                    const scheduledTime = scheduledDeparture.getTime();
+                    const currentTime = now.getTime();
+                    
+                    // Calculate dynamic ETA based on scheduled departure + variable travel time
+                    const dynamicETA = calculateETA(vehicleId, departureDateISO);
+                    etaTimeText = formatTime(dynamicETA);
+                    
+                    // Check if scheduled time has passed (bus is delayed)
+                    if (scheduledTime < currentTime) {
+                        const delayMins = Math.floor((currentTime - scheduledTime) / 60000);
+                        if (delayMins > 0) {
+                            etaLocationText = `Delayed by ${delayMins} min`;
+                        } else {
+                            etaLocationText = 'On Time';
+                        }
+                    } else {
+                        // Scheduled time is in the future - show dynamic ETA info
+                        const minsUntilETA = Math.floor((dynamicETA.getTime() - currentTime) / 60000);
+                        if (minsUntilETA > 0) {
+                            etaLocationText = `in ${minsUntilETA} min`;
+                        } else {
+                            etaLocationText = 'On Time';
+                        }
+                    }
+                } else {
+                    // No departure date, calculate from now
+                    const dynamicETA = calculateETA(vehicleId);
+                    etaTimeText = formatTime(dynamicETA);
+                    etaLocationText = 'at Central Station';
+                }
+                
+                document.getElementById('etaTime').textContent = etaTimeText;
+                document.getElementById('etaLocation').textContent = etaLocationText;
+            } else {
+                // Show actual logs for buses that have departed
+                const baseLogs = MOCK_DATA.logs.filter(log => log.vehicleId === vehicleId);
+                
+                // Create dynamic logs that change on each click
+                const now = Date.now();
+                const timeHash = now % 10000; // Use current time for variation
+                const vehicleHash = (vehicleId || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const combinedHash = (timeHash + vehicleHash) % 1000;
+                
+                // Generate dynamic logs with variation
+                const dynamicLogs = baseLogs.map(log => {
+                    // Add small random variation to timestamps (within last 24 hours)
+                    const logTime = new Date(log.timestamp).getTime();
+                    const variation = (combinedHash % 60) - 30; // -30 to +30 minutes variation
+                    const newTimestamp = new Date(logTime + variation * 60000);
+                    
+                    // Ensure timestamp is not in the future
+                    const adjustedTime = newTimestamp.getTime() > now ? new Date(now - Math.random() * 3600000) : newTimestamp;
+                    
+                    return {
+                        ...log,
+                        timestamp: adjustedTime,
+                        // Sometimes change the station (based on hash)
+                        station: (combinedHash % 3 === 0 && MOCK_DATA.STATIONS.length > 0) 
+                            ? MOCK_DATA.STATIONS[(combinedHash + vehicleHash) % MOCK_DATA.STATIONS.length]
+                            : log.station
+                    };
+                });
+                
+                // Sort by timestamp (most recent first)
+                dynamicLogs.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Add some new recent logs based on current time (simulate real-time updates)
+                const stations = MOCK_DATA.STATIONS || [];
+                if (stations.length > 0 && baseLogs.length > 0) {
+                    const numNewLogs = (combinedHash % 3) + 1; // 1-3 new logs
+                    for (let i = 0; i < numNewLogs; i++) {
+                        const minutesAgo = (combinedHash % 20) + (i * 5); // 0-20 minutes ago, spaced out
+                        const logTime = new Date(now - minutesAgo * 60000);
+                        const stationIndex = (combinedHash + i + vehicleHash) % stations.length;
+                        const logType = (combinedHash + i) % 2 === 0 ? 'arrival' : 'departure';
+                        
+                        dynamicLogs.unshift({
+                            vehicleId: vehicleId,
+                            station: stations[stationIndex],
+                            type: logType,
+                            timestamp: logTime
+                        });
+                    }
+                }
+                
+                // Shuffle order slightly based on hash (but keep recent ones at top)
+                const sortedLogs = dynamicLogs.sort((a, b) => b.timestamp - a.timestamp);
+                const recentLogs = sortedLogs.slice(0, 5); // Keep top 5 most recent
+                const olderLogs = sortedLogs.slice(5);
+                
+                // Shuffle older logs based on hash
+                const shuffledOlder = olderLogs.sort(() => (combinedHash % 2) - 0.5);
+                const displayLogs = [...recentLogs, ...shuffledOlder].slice(0, 20);
+                
+                if (displayLogs.length === 0) {
+                    logsListElement.innerHTML = `<div class="text-center text-gray-500 py-8">No logs found.</div>`;
+                } else {
+                    displayLogs.forEach(log => {
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry p-4 rounded-lg';
+                        const action = log.type === 'departure' ? 'DEPARTED' : 'ARRIVED';
+                        const icon = log.type === 'departure' ? '🚀' : '✓';
+                        logEntry.innerHTML = `<div class="flex items-start gap-3"><div class="text-green-400 text-xl mt-1">${icon}</div><div class="flex-1"><div class="text-cyan-400 font-semibold">${getTimeAgo(log.timestamp)}: ${action} at ${log.station}</div><div class="text-gray-500 text-xs">${new Date(log.timestamp).toLocaleTimeString()}</div></div></div>`;
+                        logsListElement.appendChild(logEntry);
+                    });
+                }
+                // Calculate dynamic ETA that changes on each call
+                const eta = calculateETA(vehicleId, departureDateISO);
+                const etaTimeStr = formatTime(eta);
+                document.getElementById('etaTime').textContent = etaTimeStr;
+                
+                // Update location text with dynamic info
+                if (displayLogs.length > 0) {
+                    const lastLog = displayLogs[0];
+                    const nextStation = lastLog.station || MOCK_DATA.NEXT_STATION || "Central Station";
+                    document.getElementById('etaLocation').textContent = `at ${nextStation}`;
+                } else {
+                    document.getElementById('etaLocation').textContent = 'at Central Station';
+                }
+            }
+            
+            // Scroll to logs section
+            document.getElementById('logsAndEta').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        window.displayVehicleLogs = displayVehicleLogs;
+
+        // Set up event listeners (with flag to prevent duplicates)
+        let listenersSetup = false;
+        function setupEventListeners() {
+            if (listenersSetup) return; // Prevent duplicate listeners
+            listenersSetup = true;
+            
+            const searchBtn = document.getElementById('searchBtn');
+            const findRouteBtn = document.getElementById('findRouteBtn');
+            
+            if (searchBtn) {
+                searchBtn.addEventListener('click', () => { 
+                    const ticketId = document.getElementById('ticketInput').value.trim().toUpperCase(); 
+                    if (ticketId) {
+                        // Try to get MOCK_DATA from window if not available in module scope
+                        const mockData = MOCK_DATA || window.MOCK_DATA;
+                        if (!mockData) {
+                            alert('Data not loaded yet. Please wait a moment and try again.\n\nIf this persists, ensure mockdata2.js is in the same folder and refresh the page.');
+                            console.error('MOCK_DATA not available. window.MOCK_DATA:', window.MOCK_DATA);
+                            return;
+                        }
+                        displayVehicleInfo(ticketId); 
+                    }
+                });
+            }
+            
+            if (findRouteBtn) {
+                findRouteBtn.addEventListener('click', () => {
+                    // Check if function is available
+                    if (!window.findBusesOnRoute) {
+                        alert('Search function not available. Please ensure mockdata2.js is loaded.\n\nCheck the browser console for errors.');
+                        console.error('findBusesOnRoute not available. window.findBusesOnRoute:', window.findBusesOnRoute);
+                        console.error('window.MOCK_DATA:', window.MOCK_DATA);
+                        return;
+                    }
+                    // Check if data is available
+                    const mockData = MOCK_DATA || window.MOCK_DATA;
+                    if (!mockData) {
+                        alert('Data not loaded yet. Please wait a moment and try again.\n\nIf this persists, ensure mockdata2.js is in the same folder and refresh the page.');
+                        console.error('MOCK_DATA not available. window.MOCK_DATA:', window.MOCK_DATA);
+                        return;
+                    }
+                    window.findBusesOnRoute();
+                });
+            }
+        }
+
+        // Set up event listeners when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupEventListeners);
+        } else {
+            setupEventListeners();
+        }
+
+        // Also try to set up after a delay (in case module is still loading)
+        setTimeout(setupEventListeners, 500);
+
+        window.closePayment = function() { document.getElementById('paymentModal').classList.add('hidden'); };
+        window.processPayment = function() {
+            const mobileInput = document.getElementById('passengerMobile');
+            if (mobileInput.value.length !== 10) { alert("Invalid Number"); return; }
+            const btn = document.querySelector('#paymentStep1 button');
+            const origText = btn.innerText;
+            btn.innerText = "...";
+            setTimeout(() => { document.getElementById('paymentStep1').classList.add('hidden'); document.getElementById('paymentStep2').classList.remove('hidden'); btn.innerText = origText; }, 1500);
+        };
+
+        // SMS Scheduling System
+        let scheduledSmsList = JSON.parse(localStorage.getItem('scheduledSms') || '[]');
+
+        window.openSmsModal = function(plate, from, to, arrivalTimeStr, arrivalTimeISO) {
+            const lang = document.getElementById('langSelect').value || 'en';
+            const stationTranslations = window.STATION_TRANSLATIONS || STATION_TRANSLATIONS || {};
+            const fromName = (lang !== 'en' && stationTranslations[from]) ? stationTranslations[from][lang] : from;
+            const toName = (lang !== 'en' && stationTranslations[to]) ? stationTranslations[to][lang] : to;
+            
+            document.getElementById('smsPlate').innerText = plate;
+            document.getElementById('smsFrom').innerText = fromName;
+            document.getElementById('smsTo').innerText = toName;
+            document.getElementById('smsArrival').innerText = arrivalTimeStr;
+            document.getElementById('smsMobile').value = "";
+            document.getElementById('smsModal').classList.remove('hidden');
+            document.getElementById('smsStep1').classList.remove('hidden');
+            document.getElementById('smsStep2').classList.add('hidden');
+            
+            // Store modal data for later use (use ISO string for accurate scheduling)
+            window.currentSmsData = { plate, from, to, arrivalTime: arrivalTimeISO || arrivalTimeStr };
+        };
+
+        window.closeSmsModal = function() {
+            document.getElementById('smsModal').classList.add('hidden');
+            window.currentSmsData = null;
+        };
+
+        window.scheduleSms = function() {
+            const mobileInput = document.getElementById('smsMobile');
+            const mobile = mobileInput.value.trim();
+            
+            if (mobile.length !== 10 || !/^\d+$/.test(mobile)) {
+                alert("Please enter a valid 10-digit mobile number");
+                return;
+            }
+
+            if (!window.currentSmsData) {
+                alert("Error: Bus information not available");
+                return;
+            }
+
+            const { plate, from, to, arrivalTime } = window.currentSmsData;
+            
+            // Parse arrival time to get actual arrival date
+            const arrivalDate = new Date(arrivalTime);
+            if (isNaN(arrivalDate.getTime())) {
+                alert("Error: Invalid arrival time");
+                return;
+            }
+
+            // Add to scheduled SMS list
+            const smsEntry = {
+                id: Date.now(),
+                plate: plate,
+                from: from,
+                to: to,
+                mobile: mobile,
+                arrivalTime: arrivalDate.toISOString(),
+                sent: false,
+                createdAt: new Date().toISOString()
+            };
+
+            scheduledSmsList.push(smsEntry);
+            localStorage.setItem('scheduledSms', JSON.stringify(scheduledSmsList));
+
+            // Show confirmation
+            document.getElementById('smsStep1').classList.add('hidden');
+            document.getElementById('smsStep2').classList.remove('hidden');
+        };
+
+        // Background checker to monitor bus arrivals and send SMS
+        function checkAndSendScheduledSms() {
+            const mockData = MOCK_DATA || window.MOCK_DATA;
+            if (!mockData) return;
+
+            const now = new Date();
+            const updatedList = [];
+            let hasUpdates = false;
+
+            scheduledSmsList.forEach(sms => {
+                if (sms.sent) {
+                    updatedList.push(sms);
+                    return;
+                }
+
+                const arrivalTime = new Date(sms.arrivalTime);
+                const timeDiff = now - arrivalTime;
+
+                // Check if bus has arrived (within 2 minutes of scheduled time, or check logs)
+                const vehicleLogs = mockData.logs.filter(log => 
+                    log.vehicleId === sms.plate && 
+                    log.station === sms.to && 
+                    log.type === 'arrival'
+                );
+
+                // Check if there's a recent arrival log (within last 5 minutes) or if scheduled time has passed
+                const recentArrival = vehicleLogs.some(log => {
+                    const logTime = new Date(log.timestamp);
+                    return (now - logTime) < 5 * 60000; // Within last 5 minutes
+                });
+
+                if (recentArrival || (timeDiff >= 0 && timeDiff < 10 * 60000)) {
+                    // Send SMS (simulated)
+                    sendSms(sms.mobile, sms.plate, sms.to, arrivalTime);
+                    sms.sent = true;
+                    sms.sentAt = now.toISOString();
+                    hasUpdates = true;
+                }
+
+                updatedList.push(sms);
+            });
+
+            if (hasUpdates) {
+                scheduledSmsList = updatedList;
+                localStorage.setItem('scheduledSms', JSON.stringify(scheduledSmsList));
+            }
+        }
+
+        function sendSms(mobile, plate, destination, arrivalTime) {
+            const message = `TRANSITFLOW Alert: Bus ${plate} has arrived at ${destination} at ${new Date(arrivalTime).toLocaleTimeString()}. Thank you for using TRANSITFLOW!`;
+            
+            // Simulate SMS sending (in real app, this would call an SMS API)
+            console.log(`📱 SMS sent to ${mobile}: ${message}`);
+            
+            // Show notification to user
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('SMS Sent', {
+                    body: `Alert sent to ${mobile} for bus ${plate}`,
+                    icon: '🚌'
+                });
+            }
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Check for scheduled SMS every 30 seconds
+        setInterval(checkAndSendScheduledSms, 30000);
+        // Also check immediately on load
+        setTimeout(checkAndSendScheduledSms, 2000);
+    </script>
+</body>
+</html>
